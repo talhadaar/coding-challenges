@@ -1,0 +1,10 @@
+[workspace.package]
+authors = ["Talha Dar <muhammadtalhadar@gmail.com>"]
+edition = "2021"
+readme = "README.md"
+repository = "https://github.com/talhadaar/coding-challenges"
+
+[workspace]
+members = []
+
+resolver = "2"
