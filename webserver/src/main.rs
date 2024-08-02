@@ -24,7 +24,6 @@ async fn main() -> Result<()> {
 }
 
 async fn handle_connection(mut stream: TcpStream) -> Result<()> {
-    // let buf_reader = BufReader::new(&mut stream);
 
     let header = "HTTP/1.1 200 OK";
     let body = tokio::fs::read_to_string("hello.html").await?;
