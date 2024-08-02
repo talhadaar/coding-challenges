@@ -1,33 +1,34 @@
-use std::{
-    fs,
-    io::{prelude::*, BufReader},
-    net::{SocketAddr, TcpListener, TcpStream},
+use std::net::SocketAddr;
+use tokio::{
+    io::AsyncWriteExt,
+    net::{TcpListener, TcpStream},
 };
 
-fn main() {
-    let server_socket = SocketAddr::from(([127, 0, 0, 1], 8080));
-    let listener = TcpListener::bind(server_socket).unwrap();
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-    for stream in listener.incoming() {
-        let stream = stream.unwrap();
+pub const ADDR: [u8; 4] = [127, 0, 0, 1];
+pub const PORT: u16 = 8080;
 
-        handle_connection(stream);
+#[tokio::main]
+async fn main() -> Result<()> {
+    let listener = TcpListener::bind(SocketAddr::from((ADDR, PORT))).await?;
+
+    loop {
+        let (socket, _) = listener.accept().await?;
+        tokio::spawn(async move {
+            if let Err(e) = handle_connection(socket).await {
+                eprintln!("Error: {:?}", e);
+            }
+        });
     }
 }
 
-fn handle_connection(mut stream: TcpStream) {
-    let buf_reader = BufReader::new(&mut stream);
-
-    let http_request: Vec<_> = buf_reader
-        .lines()
-        .map(|result| result.unwrap())
-        .take_while(|line| !line.is_empty())
-        .collect();
-
+async fn handle_connection(mut stream: TcpStream) -> Result<()> {
     let header = "HTTP/1.1 200 OK";
-    let body = fs::read_to_string("hello.html").unwrap();
+    let body = tokio::fs::read_to_string("hello.html").await?;
     let body_len = body.len();
 
     let response = format!("{header}\r\nContent-Length: {body_len}\r\n\r\n{body}");
-    stream.write_all(response.as_bytes()).unwrap();
+    let _ = stream.write_all(response.as_bytes()).await;
+    Ok(())
 }
