@@ -4,6 +4,7 @@ use tokio::{
     net::{TcpListener, TcpStream},
     sync::Mutex,
     task::JoinSet,
+    time::{Duration, timeout},
 };
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -38,17 +39,59 @@ impl WebServer {
 }
 
 async fn receive_clients(webserver: Arc<WebServer>) -> Result<()> {
-    println!("-> Waiting for clients to connect");
+    println!("-> receive_clients()");
+    let timeout_limit = Duration::from_secs(3);
+    
+    // loop while the terminate flag is false
+    while !*webserver.terminate.lock().await {
+        let (stream, addr) = timeout(timeout_limit, webserver.listener.accept()).await??;
+        let clients = Arc::clone(&webserver.clients);
+
+        tokio::spawn(async move {
+            let mut clients_lock = clients.lock().await;
+            clients_lock.push(Client { stream, addr });
+        });
+    }
+
+    println!("-> Terminating receive_clients()");
+    Ok(())
+}
+
+async fn handle_connection(mut stream: TcpStream) -> Result<()> {
+    let header = "HTTP/1.1 200 OK";
+    let body = tokio::fs::read_to_string("hello.html").await?;
+    let body_len = body.len();
+
+    let response = format!("{header}\r\nContent-Length: {body_len}\r\n\r\n{body}");
+    let _ = stream.write_all(response.as_bytes()).await;
     Ok(())
 }
 
 async fn process_client(client: Client) -> Result<()> {
     println!("-> Processing client: {:?}", client);
+    handle_connection(client.stream).await?;
     Ok(())
 }
 
 async fn process_clients(webserver: Arc<WebServer>) -> Result<()> {
-    println!("-> Processing clients");
+    println!("-> process_clients()");
+    let mut set = JoinSet::new();
+
+    while !*webserver.terminate.lock().await {
+        let client = webserver.clients.lock().await.pop();
+        match client {
+            Some(c) => {
+                set.spawn(async move {
+                    timeout(Duration::from_secs(3),process_client(c)).await.unwrap().unwrap();
+                });
+            }
+            None => {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        }
+    }
+
+    set.abort_all();
     Ok(())
 }
 
@@ -56,7 +99,7 @@ async fn process_clients(webserver: Arc<WebServer>) -> Result<()> {
 async fn main() -> Result<()> {
     let saddr = SocketAddr::from((ADDR, PORT));
     let webserver_pool = Arc::new(WebServer::new(&saddr).await?);
-    let mut set = JoinSet::new();
+    let mut set = JoinSet::new(); // TODO explore using barriers instead of JoinSet?
 
     // Terminate signal process
     println!("-> Press Ctrl-C to terminate the server");
@@ -82,15 +125,5 @@ async fn main() -> Result<()> {
     set.join_next().await;
     set.join_next().await;
 
-    Ok(())
-}
-
-async fn handle_connection(mut stream: TcpStream) -> Result<()> {
-    let header = "HTTP/1.1 200 OK";
-    let body = tokio::fs::read_to_string("hello.html").await?;
-    let body_len = body.len();
-
-    let response = format!("{header}\r\nContent-Length: {body_len}\r\n\r\n{body}");
-    let _ = stream.write_all(response.as_bytes()).await;
     Ok(())
 }
