@@ -1,5 +1,12 @@
-use std::net::SocketAddr;
-use tokio::{net::{TcpListener, TcpStream}, io::{BufReader, AsyncWriteExt, AsyncReadExt}};
+use std::{
+    net::SocketAddr,
+    sync::{Arc, Mutex},
+};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt, BufReader},
+    net::{TcpListener, TcpStream},
+    task::JoinSet,
+};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -12,7 +19,11 @@ async fn main() -> Result<()> {
 
     loop {
         let (socket, _) = listener.accept().await?;
-        handle_connection(socket).await?;
+        tokio::spawn(async move {
+            if let Err(e) = handle_connection(socket).await {
+                eprintln!("Error: {:?}", e);
+            }
+        });
     }
 }
 
