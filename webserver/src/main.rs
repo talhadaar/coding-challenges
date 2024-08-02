@@ -82,7 +82,7 @@ async fn process_clients(webserver: Arc<WebServer>) -> Result<()> {
         match client {
             Some(c) => {
                 set.spawn(async move {
-                    timeout(Duration::from_secs(3),process_client(c)).await.unwrap().unwrap();
+                    timeout(Duration::from_secs(5),process_client(c)).await.unwrap().unwrap();
                 });
             }
             None => {
