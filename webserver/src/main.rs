@@ -1,10 +1,10 @@
-use std::{borrow::BorrowMut, net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc};
 use tokio::{
     io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
     sync::Mutex,
     task::JoinSet,
-    time::{Duration, timeout},
+    time::{timeout, Duration},
 };
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -41,7 +41,7 @@ impl WebServer {
 async fn receive_clients(webserver: Arc<WebServer>) -> Result<()> {
     println!("-> receive_clients()");
     let timeout_limit = Duration::from_secs(3);
-    
+
     // loop while the terminate flag is false
     while !*webserver.terminate.lock().await {
         let (stream, addr) = timeout(timeout_limit, webserver.listener.accept()).await??;
@@ -82,7 +82,10 @@ async fn process_clients(webserver: Arc<WebServer>) -> Result<()> {
         match client {
             Some(c) => {
                 set.spawn(async move {
-                    timeout(Duration::from_secs(5),process_client(c)).await.unwrap().unwrap();
+                    timeout(Duration::from_secs(5), process_client(c))
+                        .await
+                        .unwrap()
+                        .unwrap();
                 });
             }
             None => {
