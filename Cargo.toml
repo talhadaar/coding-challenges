@@ -7,6 +7,3 @@ repository = "https://github.com/talhadaar/coding-challenges"
 [workspace]
 members = ["webserver"]
 resolver = "2"
-
-[workspace.dependencies]
-tokio = "1.39.2"
