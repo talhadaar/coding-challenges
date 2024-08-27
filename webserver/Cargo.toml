@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 bytes = "1.7.1"
+ctrlc-async = "3.2.2"
 tokio = { workspace = true, features = ["full"] }
