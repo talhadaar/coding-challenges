@@ -36,6 +36,12 @@ struct Args {
     #[arg(long, short)]
     field: Option<usize>,
 
+    #[arg(long, short)]
+    bytes: Option<usize>,
+
+    #[arg(long, short)]
+    character: Option<usize>,
+
     #[arg(value_name = "FILE")]
     file: Option<PathBuf>,
 }
