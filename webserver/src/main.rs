@@ -5,7 +5,6 @@ use tokio::{
     sync::Mutex,
     task::JoinSet,
     time::{timeout, Duration},
-};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -57,14 +56,18 @@ async fn receive_clients(webserver: Arc<WebServer>) -> Result<()> {
     Ok(())
 }
 
-async fn handle_connection(mut stream: TcpStream) -> Result<()> {
-    let header = "HTTP/1.1 200 OK";
-    let body = tokio::fs::read_to_string("hello.html").await?;
-    let body_len = body.len();
+#[tokio::main]
+async fn main() -> Result<()> {
+    let listener = TcpListener::bind(SocketAddr::from((ADDR, PORT))).await?;
 
-    let response = format!("{header}\r\nContent-Length: {body_len}\r\n\r\n{body}");
-    let _ = stream.write_all(response.as_bytes()).await;
-    Ok(())
+    loop {
+        let (socket, _) = listener.accept().await?;
+        tokio::spawn(async move {
+            if let Err(e) = handle_connection(socket).await {
+                eprintln!("Error: {:?}", e);
+            }
+        });
+    }
 }
 
 async fn process_client(client: Client) -> Result<()> {
