@@ -1,0 +1,10 @@
+[package]
+name = "cut"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+readme.workspace = true
+repository.workspace = true
+
+[dependencies]
+clap = { version = "4.5.16", features = ["derive"] }
