@@ -25,7 +25,7 @@ impl File {
     fn display_field(&self, field: usize) {
         for record in &self.records {
             if field < record.len() {
-                println!("{}", record[field]);
+                println!("{}", record[field - 1]);
             }
         }
     }
@@ -35,6 +35,9 @@ impl File {
 struct Args {
     #[arg(long, short)]
     field: Option<usize>,
+
+    #[arg(long, short)]
+    delimiter: Option<String>,
 
     #[arg(long, short)]
     bytes: Option<usize>,
@@ -48,12 +51,13 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
+    let delim = args.delimiter.unwrap_or("\t".to_string());
 
     // read from file or stdin
     let file = if args.file.is_some() {
-        File::new(std::fs::File::open(args.file.unwrap()).unwrap(), "\t")
+        File::new(std::fs::File::open(args.file.unwrap()).unwrap(), &delim)
     } else {
-        File::new(std::io::stdin(), "\t")
+        File::new(std::io::stdin(), &delim)
     };
 
     if args.field.is_some() {
